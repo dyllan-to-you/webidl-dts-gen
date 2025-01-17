@@ -15,21 +15,8 @@ jobs:
       contents: write
     
     steps:
-      - name: Configure Git globally
-        run: |
-          git config --global core.longpaths true
-          git config --global core.symlinks false
-
       - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Configure Git for commits
-        run: |
-          git config --local user.email "github-actions[bot]@users.noreply.github.com"
-          git config --local user.name "github-actions[bot]"
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -43,31 +30,8 @@ jobs:
       - name: Build
         run: yarn build
 
-      - name: Get package version
-        id: package-version
-        run: |
-          CURRENT_VERSION=$(node -p "require('./package.json').version")
-          echo "version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
-
-      - name: Check for changes and commit
-        run: |
-          if [[ -n "$(git status --porcelain)" ]]; then
-            git add .
-            git commit -m "chore: update built files [skip ci]"
-            git push
-          fi
-
-      - name: Check if tag exists
-        id: check-tag
-        run: |
-          if ! git rev-parse "v${{ steps.package-version.outputs.version }}" >/dev/null 2>&1; then
-            echo "tag_exists=false" >> $GITHUB_OUTPUT
-          else
-            echo "tag_exists=true" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Create and push tag
-        if: steps.check-tag.outputs.tag_exists == 'false'
-        run: |
-          git tag -a "v${{ steps.package-version.outputs.version }}" -m "Release v${{ steps.package-version.outputs.version }}"
-          git push origin "v${{ steps.package-version.outputs.version }}"
+      - name: Commit changes
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "chore: update built files [skip ci]"
+          file_pattern: 'dist/*'
