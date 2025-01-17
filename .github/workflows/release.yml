@@ -5,38 +5,53 @@ on:
     branches:
       - main
 
-concurrency: 
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+concurrency: ${{ github.workflow }}-${{ github.ref }}
 
 jobs:
-  github-release:
-    name: Release on github
+  version:
+    name: Create Release PR
     runs-on: ubuntu-latest
     outputs:
       hasChangesets: ${{ steps.changesets.outputs.hasChangesets }}
-      changes: ${{ steps.changesets.outputs.changes }}
     steps:
-      - uses: ./.github/actions/setup
-        
-      - name: Version and Create PR
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 22.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+
+      - name: Install Dependencies
+        run: yarn
+
+      - name: Create Release Pull Request
         id: changesets
         uses: changesets/action@v1
         with:
           version: yarn bump
-          commit: "chore(changeset): version packages"
           publish: false
+          commit: "chore(changeset): version packages"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  npm-release:
+  publish:
     name: Publish to npm
-    needs: github-release
-    if: needs.github-release.outputs.hasChangesets == 'true' && github.repository_owner == 'pmndrs'
+    needs: version
+    if: needs.version.outputs.hasChangesets == 'true' && github.repository_owner == 'pmndrs'
     runs-on: ubuntu-latest
     steps:
-      - uses: ./.github/actions/setup
-        
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 22.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+
+      - name: Install Dependencies
+        run: yarn
+
       - name: Publish to npm
         run: yarn release
         env:
