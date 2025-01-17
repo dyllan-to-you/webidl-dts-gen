@@ -17,6 +17,9 @@ jobs:
       contents: write
     
     steps:
+      - name: Configure Git
+        run: git config --global core.symlinks false
+
       - name: Checkout repository
         uses: actions/checkout@v4
 
