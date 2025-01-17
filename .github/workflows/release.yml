@@ -8,51 +8,29 @@ on:
 concurrency: ${{ github.workflow }}-${{ github.ref }}
 
 jobs:
-  version:
+  publish:
     name: Create Release PR
     runs-on: ubuntu-latest
     outputs:
       hasChangesets: ${{ steps.changesets.outputs.hasChangesets }}
     steps:
       - name: Checkout Repo
-        uses: actions/checkout@v4
-
+        uses: actions/checkout@v2
+  
       - name: Setup Node.js 22.x
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v2
         with:
           node-version: 22.x
-
+  
       - name: Install Dependencies
         run: yarn
-
-      - name: Create Release Pull Request
+  
+      - name: Create Release Pull Request or Publish to npm
         id: changesets
         uses: changesets/action@v1
         with:
           version: yarn bump
-          publish: false
-          commit: "chore(changeset): version packages"
+          publish: yarn release
+          commit: "chore(changeset): release packages"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  publish:
-    name: Publish to npm
-    needs: version
-    if: needs.version.outputs.hasChangesets == 'true' && github.repository_owner == 'pmndrs'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Repo
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js 22.x
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22.x
-
-      - name: Install Dependencies
-        run: yarn
-
-      - name: Publish to npm
-        run: yarn release
-        env:
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
