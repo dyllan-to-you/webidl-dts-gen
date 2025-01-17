@@ -1,36 +1,63 @@
-name: Release
+name: Build and Version Bump
 
 on:
   push:
     branches:
       - main
-
-concurrency: ${{ github.workflow }}-${{ github.ref }}
+  pull_request:
+    branches:
+      - main
 
 jobs:
-  publish:
-    name: Release
+  build-and-bump:
     runs-on: ubuntu-latest
-    outputs:
-      hasChangesets: ${{ steps.changesets.outputs.hasChangesets }}
+    permissions:
+      contents: write
+    
     steps:
-      - name: Checkout Repo
-        uses: actions/checkout@v2
-  
-      - name: Setup Node.js 22.x
-        uses: actions/setup-node@v2
+      - name: Checkout repository
+        uses: actions/checkout@v4
         with:
-          node-version: 22.x
-  
-      - name: Install Dependencies
-        run: yarn
-  
-      - name: Create Release Pull Request or Create GitHub Release
-        id: changesets
-        uses: changesets/action@v1
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          version: yarn bump
-          publish: yarn release:github
-          commit: "chore(changeset): release packages"
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Configure Git
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+
+      - name: Check for changes
+        id: check_changes
+        run: |
+          if [[ -n "$(git status --porcelain)" ]]; then
+            echo "changes=true" >> $GITHUB_OUTPUT
+          else
+            echo "changes=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Bump version
+        if: steps.check_changes.outputs.changes == 'true'
+        run: |
+          npm version patch -m "Bump version to %s [skip ci]"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Commit and push changes
+        if: steps.check_changes.outputs.changes == 'true'
+        run: |
+          git add .
+          git commit -m "Build and update files [skip ci]"
+          git push
+          git push --tags
