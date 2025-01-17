@@ -1,4 +1,4 @@
-name: Build and Version Bump
+name: Build and Commit
 
 on:
   push:
@@ -9,7 +9,7 @@ on:
       - main
 
 jobs:
-  build-and-bump:
+  build-and-commit:
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -25,39 +25,44 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
+          cache: 'yarn'
 
       - name: Install dependencies
-        run: npm ci
+        run: yarn install --frozen-lockfile
 
       - name: Build
-        run: npm run build
+        run: yarn build
+
+      - name: Get package version
+        id: package-version
+        run: |
+          CURRENT_VERSION=$(node -p "require('./package.json').version")
+          echo "version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
 
       - name: Configure Git
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
 
-      - name: Check for changes
-        id: check_changes
+      - name: Check for changes and commit
         run: |
           if [[ -n "$(git status --porcelain)" ]]; then
-            echo "changes=true" >> $GITHUB_OUTPUT
-          else
-            echo "changes=false" >> $GITHUB_OUTPUT
+            git add .
+            git commit -m "chore: update built files [skip ci]"
+            git push
           fi
 
-      - name: Bump version
-        if: steps.check_changes.outputs.changes == 'true'
+      - name: Check if tag exists
+        id: check-tag
         run: |
-          npm version patch -m "Bump version to %s [skip ci]"
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          if ! git rev-parse "v${{ steps.package-version.outputs.version }}" >/dev/null 2>&1; then
+            echo "tag_exists=false" >> $GITHUB_OUTPUT
+          else
+            echo "tag_exists=true" >> $GITHUB_OUTPUT
+          fi
 
-      - name: Commit and push changes
-        if: steps.check_changes.outputs.changes == 'true'
+      - name: Create and push tag
+        if: steps.check-tag.outputs.tag_exists == 'false'
         run: |
-          git add .
-          git commit -m "Build and update files [skip ci]"
-          git push
-          git push --tags
+          git tag -a "v${{ steps.package-version.outputs.version }}" -m "Release v${{ steps.package-version.outputs.version }}"
+          git push origin "v${{ steps.package-version.outputs.version }}"
