@@ -9,7 +9,7 @@ concurrency: ${{ github.workflow }}-${{ github.ref }}
 
 jobs:
   publish:
-    name: Create Release PR
+    name: Release
     runs-on: ubuntu-latest
     outputs:
       hasChangesets: ${{ steps.changesets.outputs.hasChangesets }}
@@ -25,12 +25,12 @@ jobs:
       - name: Install Dependencies
         run: yarn
   
-      - name: Create Release Pull Request or Publish to npm
+      - name: Create Release Pull Request or Create GitHub Release
         id: changesets
         uses: changesets/action@v1
         with:
           version: yarn bump
-          publish: yarn release
+          publish: yarn release:github
           commit: "chore(changeset): release packages"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

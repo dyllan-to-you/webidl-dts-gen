@@ -13,7 +13,9 @@
         "test": "yarn workspaces foreach -A -t --exclude monorepo run test",
         "change": "yarn changeset",
         "bump": "yarn changeset version && yarn install --mode update-lockfile",
-        "release": "yarn build && yarn test && changeset publish"
+        "release": "yarn build && yarn test && changeset publish",
+        "release:github": "changeset publish --no-npm"
+           
     },
     "workspaces": [
         "packages/webidl-dts-gen"
