@@ -15,11 +15,21 @@ jobs:
       contents: write
     
     steps:
+      - name: Configure Git globally
+        run: |
+          git config --global core.longpaths true
+          git config --global core.symlinks false
+
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure Git for commits
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -38,11 +48,6 @@ jobs:
         run: |
           CURRENT_VERSION=$(node -p "require('./package.json').version")
           echo "version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
-
-      - name: Configure Git
-        run: |
-          git config --local user.email "github-actions[bot]@users.noreply.github.com"
-          git config --local user.name "github-actions[bot]"
 
       - name: Check for changes and commit
         run: |
