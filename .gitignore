@@ -1,5 +1,5 @@
 **/node_modules
-**/dist
+# **/dist
 
 coverage/
 yarn-error.log
@@ -16,7 +16,7 @@ coverage/
 .idea
 .rpt2_cache/
 .eslintcache
-dist
+# dist
 tmp
 
 .yarn/*
